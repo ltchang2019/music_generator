@@ -8,8 +8,8 @@ combination = []
 # Utilities
 # ==========
 def compress_and_rest_strip_combination(combination):
-    compressed = _compress_combination(combination)
-    return _strip_rests(compressed)
+    stripped = _strip_rests(combination)
+    return _compress_combination(stripped)
 
 def _compress_combination(combination):
     i = 0
@@ -32,14 +32,11 @@ def _strip_rests(combination):
     return stripped_combination
 
 
-def _two_consecutive_notes_index(compressed_and_stripped, note) -> int:
-    i = 0
-    while i + 1 < len(compressed_and_stripped):
-        if compressed_and_stripped[i] is note and compressed_and_stripped[i+1] is note:
-            return i+1
-        i += 1
-    
-    return -1
+def _is_consecutive(compressed_and_stripped_slice) -> bool:
+    if len(compressed_and_stripped_slice) is 1:
+        return False
+
+    return compressed_and_stripped_slice[0] is compressed_and_stripped_slice[1]
 
 def _note_has_more_than_four_separate_chains(compressed_and_stripped, note) -> bool:
     notes_minus_current = notes[:]
@@ -52,13 +49,14 @@ def _note_has_more_than_four_separate_chains(compressed_and_stripped, note) -> b
 # Conditions
 # ==========
 def check_all(compressed_and_stripped) -> bool:
-    return each_note_has_at_least_one_consecutive_repeat(compressed_and_stripped) and no_note_repeated_consecutively_more_than_eight_times(compressed_and_stripped)
+    return each_note_first_appearance_has_at_least_one_consecutive_repeat(compressed_and_stripped) and no_note_repeated_consecutively_more_than_eight_times(compressed_and_stripped)
 
 
-def each_note_has_at_least_one_consecutive_repeat(compressed_and_stripped) -> bool:
-    for note in notes:
-        consecutive_index = _two_consecutive_notes_index(compressed_and_stripped, note)
-        if consecutive_index is -1:
+def each_note_first_appearance_has_at_least_one_consecutive_repeat(compressed_and_stripped) -> bool:
+    note_set = set(compressed_and_stripped)
+    for note in note_set:
+        first_index = compressed_and_stripped.index(note)
+        if not _is_consecutive(compressed_and_stripped[first_index:]):
             return False
     
     return True
@@ -108,25 +106,26 @@ def test_all():
     test_no_note_can_have_four_separate_chains()
 
 def test_each_note_repeated_twice_consecutively():
-    pass_case = compress_and_rest_strip_combination(["1", "r", "1", "3", "3", "3"])
-    fail_case = compress_and_rest_strip_combination(["1", "r", "3"])
-    print("pass case:", pass_case)
-    assert(each_note_has_at_least_one_consecutive_repeat(pass_case))
-    assert(not each_note_has_at_least_one_consecutive_repeat(fail_case))
+    pass_case = _strip_rests(["1", "r", "1", "3", "3", "3", "1", "r", "1"])
+    fail_case = _strip_rests(["1", "r", "1", "3", "3", "3", "1", "r", "6"])
+    assert(each_note_first_appearance_has_at_least_one_consecutive_repeat(pass_case))
+    assert(not each_note_first_appearance_has_at_least_one_consecutive_repeat(fail_case))
 
     print("Passed test_each_note_repeated_twice_consecutively!")
 
 def test_no_note_repeated_consecutively_more_than_eight_times():
-    assert(no_note_repeated_consecutively_more_than_eight_times(["1", "1", "1", "1", "1", "3", "1", "1"]))
-
-    # 1s repeated 9x in a row
-    assert(not no_note_repeated_consecutively_more_than_eight_times(["1", "1", "1", "1", "1", "1", "1", "1", "1"]))
+    pass_case = _strip_rests(["1", "R", "1", "R", "1", "1", "1", "1", "r", "1", "1"])
+    fail_case = _strip_rests(["1", "R", "1", "R", "1", "1", "1", "1", "r", "1", "1", "R", "1"])
+    assert(no_note_repeated_consecutively_more_than_eight_times(pass_case))
+    assert(not no_note_repeated_consecutively_more_than_eight_times(fail_case))
 
     print("Passed test_no_note_repeated_consecutively_more_than_eight_times!")
 
 def test_no_note_can_have_four_separate_chains():
-    assert(no_note_can_have_four_separate_chains(["1", "1", "3", "3", "1", "1", "1", "6", "6", "6", "7", "7", "7", "1", "1", "1", "3", "3", "3", "1", "1", "7", "7", "6", "6"]))
-    assert(not no_note_can_have_four_separate_chains(["1", "1", "3", "3", "1", "1", "1", "6", "6", "6", "7", "7", "7", "1", "1", "1", "3", "3", "3", "1", "1", "7", "7", "1", "1"]))
+    pass_case = _strip_rests(["1", "1", "r", "3", "3", "r", "1", "1", "1", "r", "6", "6", "6", "r", "7", "7", "7", "R", "1", "1", "1", "R", "3", "3", "3", "R", "1", "R", "1", "R", "7", "7", "6", "6"])
+    fail_case = _strip_rests(["1", "1", "r", "3", "3", "r", "1", "1", "1", "r", "6", "6", "6", "r", "7", "7", "7", "R", "1", "1", "1", "R", "3", "3", "3", "R", "1", "R", "1", "R", "7", "7", "1", "1"])
+    assert(no_note_can_have_four_separate_chains(pass_case))
+    assert(not no_note_can_have_four_separate_chains(fail_case))
 
     print("Passed test_no_note_can_have_four_separate_chains!")
 
