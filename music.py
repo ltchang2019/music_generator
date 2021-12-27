@@ -1,3 +1,4 @@
+import sys
 import more_itertools as mit
 
 notes = ["1","3","6","7"]
@@ -9,17 +10,16 @@ combination = []
 # =========
 def compress_and_strip_rests(combination):
     stripped = strip_rests(combination)
-    return compress_combination(stripped)
+    return compress(stripped)
 
-def compress_combination(combination):
+def compress(combination):
     i = 0
     compressed = []
     while i < len(combination):
-        
-        if combination[i] is "r" and combination[i+1] is "r":
+        if len(combination[i:]) > 1 and combination[i] == "r" and combination[i+1] == "r":
             compressed += "R"
             i += 2
-        elif combination[i] is "r":
+        elif combination[i] == "r":
             compressed += combination[i]
             i += 1
         else:
@@ -38,10 +38,10 @@ def strip_rests(combination):
 
 
 def _is_consecutive(compressed_and_stripped_slice) -> bool:
-    if len(compressed_and_stripped_slice) is 1:
+    if len(compressed_and_stripped_slice) == 1:
         return False
 
-    return compressed_and_stripped_slice[0] is compressed_and_stripped_slice[1]
+    return compressed_and_stripped_slice[0] == compressed_and_stripped_slice[1]
 
 def _note_has_more_than_four_separate_chains(compressed_and_stripped, note) -> bool:
     notes_minus_current = notes[:]
@@ -54,7 +54,7 @@ def _note_has_more_than_four_separate_chains(compressed_and_stripped, note) -> b
 # Conditions
 # ==========
 def check_all(combination) -> bool:
-    compressed = compress_combination(combination)
+    compressed = compress(combination)
     compressed_conditions = cannot_have_more_than_five_consecutive_R(compressed)
 
     if not compressed_conditions:
@@ -100,10 +100,42 @@ def no_note_can_have_four_separate_chains(compressed_and_stripped) -> bool:
     
     return True
 
+# Filters
+# =======
+def filter(combination) -> bool:
+    compressed = compress(combination)
+    compressed_and_stripped = compress_and_strip_rests(combination)
+    return no_eight_consecutive(compressed) and first_appearance_at_least_twice_consecutive(compressed_and_stripped)
+
+def no_eight_consecutive(compressed) -> bool:
+    i = 0
+    while i + 10 < len(compressed):
+        if len(set(compressed[i:i+10])) == 1:
+            return False
+        
+        i += 10
+    
+    return True
+
+def first_appearance_at_least_twice_consecutive(compressed_and_stripped) -> bool:
+    note_set = set(compressed_and_stripped)
+    for note in note_set:
+        first_index = compressed_and_stripped.index(note)
+
+        # Don't filter out if no more notes after first appearance
+        if len(compressed_and_stripped[first_index:]) < 2:
+            return True
+
+        if not _is_consecutive(compressed_and_stripped[first_index:]):
+            return False
+    
+    return True
+        
+
 # Main
 # ====
 def generate(combination):
-    for note in notes:
+    for note in notes_and_rests:
         notes_to_add = []
         if note == "r":
             notes_to_add = ["r"]
@@ -111,11 +143,14 @@ def generate(combination):
             notes_to_add = [note, note]
 
         if len(combination) == 64:
+            # print("Combination tried: ", compress(combination), end="\r")
             if check_all(combination):
                 print(combination)
         elif len(combination) > 64:
-            return combination
+            return
         else:
+            if not filter(combination):
+                return
             new_combination = combination + notes_to_add
             generate(new_combination)
 
@@ -169,4 +204,8 @@ def test_no_note_can_have_four_separate_chains():
 
     print("Passed test_no_note_can_have_four_separate_chains!")
 
-test_all()
+args = sys.argv[1:]
+if args[0] == "test":
+    test_all()
+elif args[0] == "generate":
+    generate([])
